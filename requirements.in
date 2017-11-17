@@ -1,0 +1,8 @@
+flask
+flask-sqlalchemy
+psycopg2
+flask-restful
+uwsgi
+flask-admin
+flask-login
+flask-babelex

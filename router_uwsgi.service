@@ -1,0 +1,13 @@
+[Unit]
+Description=uWSGI server instance configured to serve Sipuni Router backend API
+After=network.target
+
+[Service]
+User=router
+Group=www-data
+WorkingDirectory=/home/router
+Environment="PATH=/home/router/venv/bin"
+ExecStart=/home/router/venv/bin/uwsgi --ini router_uwsgi.ini
+
+[Install]
+WantedBy=multi-user.target

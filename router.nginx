@@ -1,0 +1,25 @@
+server {
+
+    listen 80;
+
+    server_name router.speechanalytics.ru;
+    charset utf-8;
+    client_max_body_size 1m;
+
+    location / {
+        include uwsgi_params;
+        uwsgi_pass unix:/home/router/router_uwsgi.sock;
+    }
+
+    listen 443 ssl; # managed by Certbot
+    ssl_certificate /etc/letsencrypt/live/router.speechanalytics.ru/fullchain.pem; # managed by Certbot
+    ssl_certificate_key /etc/letsencrypt/live/router.speechanalytics.ru/privkey.pem; # managed by Certbot
+    include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
+
+    ssl_dhparam /etc/nginx/ssl/dhparam.pem;
+
+    if ($scheme != "https") {
+        return 301 https://$host$request_uri;
+    } # managed by Certbot
+
+}
