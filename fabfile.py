@@ -20,7 +20,10 @@ FILES = [
 LOCAL_ROOT = op.dirname(op.realpath(__file__))
 sys.path.insert(0, op.join(LOCAL_ROOT, PROJ))
 # Importing config as a standalone file, not within PROJ module:
-config = importlib.import_module('config')
+try:
+    config = importlib.import_module('config')
+except ImportError:
+    config = None
 REMOTE_ROOT = '/home/{}'.format(PROJ)
 NGINX = PROJ + '.nginx'
 SYSTEMD = PROJ + '_uwsgi.service'
@@ -117,7 +120,7 @@ def download_config():
 
 
 def deploy(setup=False, db=False):
-    if not op.isfile(op.join(LOCAL_ROOT, PROJ, 'config.py')):
+    if config is None:
         raise Exception('Local config.py missing')
 
     if db:
