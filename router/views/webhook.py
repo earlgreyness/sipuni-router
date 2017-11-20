@@ -20,9 +20,10 @@ class Router(Resource):
         if not check_pair_exists(company, department):
             abort(404)
 
-        found = Operator.query.filter_by(
-            department_name=department,
-            phone_number=args['fromnum']).first() is not None
+        variants = [args['fromnum'], args['tonum']]
+        found = Operator.query.filter(
+            Operator.department_name == department,
+            Operator.phone_number.in_(variants)).first() is not None
 
         return {'choice': int(found)}
 
