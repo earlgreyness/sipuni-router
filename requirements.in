@@ -6,3 +6,4 @@ uwsgi
 flask-admin
 flask-login
 flask-babelex
+arrow
