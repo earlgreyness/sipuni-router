@@ -2,6 +2,8 @@ from functools import partial
 
 from sqlalchemy import Column as BaseColumn, String, ForeignKey, Integer
 from sqlalchemy.orm import relationship
+from sqlalchemy_utils import ArrowType
+import arrow
 
 from router import db
 
@@ -42,3 +44,27 @@ class Operator(db.Model):
 
     def __str__(self):
         return self.name
+
+
+class Record(db.Model):
+    id = Column(Integer, primary_key=True)
+    date_created = Column(ArrowType(timezone=True), default=arrow.now)
+
+    fromnum = Column(String, default='')
+    tonum = Column(String, default='')
+    dtmf = Column(String, default='')
+    label = Column(String, default='')
+    time = Column(String, default='')
+
+    address = Column(String, default='')
+    choice = Column(Integer, nullable=True)
+
+    def __init__(self, *, address, args, choice=None):
+        self.address = address
+        self.choice = choice
+
+        for param in ['fromnum', 'tonum', 'dtmf', 'label', 'time']:
+            setattr(self, param, args.get(param, '') or '')
+
+    def __repr__(self):
+        return '<Record({!r}, {!r})>'.format(self.address, self.result)
