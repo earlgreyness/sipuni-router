@@ -36,7 +36,8 @@ class BaseView(ModelView):
     column_display_pk = True
     column_labels = {'name': 'Компания'}
     column_formatters = dict(
-        date_created=lambda v, c, m, p: m.date_created.format('YYYY-MM-DD HH:mm:ss', locale='ru')
+        date_created=lambda v, c, m, p: m.date_created.format('YYYY-MM-DD HH:mm:ss', locale='ru'),
+        choice=lambda v, c, m, p: 'Найден' if m.choice == 1 else 'Не найден',
     )
 
     def get_column_name(self, field):
@@ -80,15 +81,17 @@ class RecordView(BaseView):
         'date_created': 'Дата',
         'choice': 'Результат',
         'address': 'Запрос',
+        'fromnum': 'Номер (откуда)',
+        'tonum': 'Номер (куда)',
     }
     column_list = [
         'date_created',
         'address',
-        'choice',
         'fromnum',
         'tonum',
+        'choice',
         # 'dtmf',
-        'label',
+        # 'label',
         # 'time',
     ]
 
