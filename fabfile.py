@@ -4,10 +4,8 @@ import sys
 from urllib.parse import urlparse
 from collections import namedtuple
 
-from fabric.api import put, settings, run, env, local, get
-from fabric.context_managers import cd, lcd, shell_env
+from fabric.api import put, settings, run, env, local, get, prompt, cd, shell_env
 from fabric.contrib import files
-from fabric.operations import prompt
 
 PROJ = 'router'
 HOST = '188.227.72.189'
@@ -18,12 +16,14 @@ FILES = [
 ]
 
 LOCAL_ROOT = op.dirname(op.realpath(__file__))
+
 sys.path.insert(0, op.join(LOCAL_ROOT, PROJ))
 # Importing config as a standalone file, not within PROJ module:
 try:
     config = importlib.import_module('config')
 except ImportError:
     config = None
+
 REMOTE_ROOT = '/home/{}'.format(PROJ)
 NGINX = PROJ + '.nginx'
 SYSTEMD = PROJ + '_uwsgi.service'
@@ -32,6 +32,8 @@ env.hosts = [HOST]
 env.user = PROJ
 env.shell = '/bin/bash -c'  # dropped -l flag
 env.colorize_errors = True
+env.cwd = REMOTE_ROOT
+env.lcwd = LOCAL_ROOT
 
 
 def psql(command, locally=False):
@@ -61,7 +63,7 @@ def _create_database(dbname, username, locally=False):
 
 
 def setup_nginx():
-    with settings(user='root'), lcd(LOCAL_ROOT):
+    with settings(user='root'):
         put(NGINX, '/etc/nginx/sites-available/')
         run('ln -s -f /etc/nginx/sites-available/{} '
             '/etc/nginx/sites-enabled/'.format(NGINX))
@@ -90,8 +92,7 @@ def restore_db_to_local():
         return
     db = _db()
     outfile = 'temp-dump.sql'
-    with settings(user=db.username), cd('/tmp'), lcd(LOCAL_ROOT), \
-            shell_env(LC_ALL='ru_RU.UTF-8'):
+    with settings(user=db.username), cd('/tmp'), shell_env(LC_ALL='ru_RU.UTF-8'):
         run(
             'pg_dump --create --clean {} > {}'
             .format(db.dbname, outfile)
@@ -103,7 +104,7 @@ def restore_db_to_local():
 
 
 def setup_systemd():
-    with settings(user='root'), lcd(LOCAL_ROOT):
+    with settings(user='root'):
         put(SYSTEMD, '/etc/systemd/system/')
         run('systemctl enable {}'.format(SYSTEMD))
         run('systemctl start {}'.format(SYSTEMD))
@@ -115,36 +116,28 @@ def reload():
 
 
 def download_config():
-    with cd(REMOTE_ROOT), lcd(LOCAL_ROOT):
-        get('{}/config.py'.format(PROJ), PROJ)
+    get('{}/config.py'.format(PROJ), PROJ)
 
 
-def deploy(setup=False, db=False):
+def deploy(setup=False):
     if config is None:
         raise Exception('Local config.py missing')
 
-    if db:
-        setup_db()
     run('mkdir -p {}'.format(REMOTE_ROOT))
+    run('mkdir -p logs')
 
-    with cd(REMOTE_ROOT), lcd(LOCAL_ROOT):
-        run('mkdir -p logs')
+    for filename in FILES:
+        put(filename, '.')
 
-        for filename in FILES:
-            put(filename, '.')
+    local('find . -type d -name __pycache__ -prune -exec rm -R -f {} \;')
+    run('rm -R -f {}'.format(PROJ))
+    put(PROJ, '.')
+    run('chmod -R o-rwx {}'.format(PROJ))
 
-        local('find . -type d -name __pycache__ -prune -exec rm -R -f {} \;')
-        run('rm -R -f {}'.format(PROJ))
-        put(PROJ, '.')
-        run('chmod -R o-rwx {}'.format(PROJ))
-
-        if not files.exists('venv'):
-            run('python3 -m venv venv')
-
-        run('venv/bin/pip3 install --upgrade pip')
-        run('venv/bin/pip3 install -r requirements.txt')
-
-        run('venv/bin/python3 -c "from {} import db; db.create_all()"'.format(PROJ))
+    if not files.exists('venv'):
+        run('python3 -m venv venv')
+    run('venv/bin/pip3 install --upgrade pip')
+    run('venv/bin/pip3 install -r requirements.txt')
 
     if setup:
         setup_systemd()
