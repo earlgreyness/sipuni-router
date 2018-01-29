@@ -1,12 +1,34 @@
-from flask import abort, request
+from itertools import chain
+
+from flask import abort, request, jsonify
 from flask_restful import Api, Resource, reqparse
+import arrow
 
 from router import app, db
-from router.models import check_pair_exists, Operator, Record
+from router.models import check_pair_exists, Operator, Record, Event
+
+
+def find(department, fromnum, *, moment):
+    start = arrow.now().shift(minutes=-2)
+
+    query_operators = Operator.query.filter_by(department_name=department)
+    numbers = set(chain.from_iterable(x.get_numbers() for x in query_operators))
+
+    query = Event.query.filter(
+        Event.src_num == fromnum,
+        Event.date_created > start,
+        Event.date_created < moment,
+    ).order_by(
+        Event.date_created.desc()
+    )
+
+    return any(event.short_dst_num in numbers for event in query)
 
 
 class Router(Resource):
     def get(self, company, department):
+        finish = arrow.now()
+
         try:
             app.logger.debug(
                 'Complete incoming info: path={}, args={}, form={}, json={}'
@@ -31,14 +53,8 @@ class Router(Resource):
             db.session.commit()
             abort(404)
 
-        variants = [args['fromnum'] or '', args['tonum'] or '']
-        query = Operator.query.filter_by(department_name=department)
-        found = False
-
-        for operator in query:
-            if set(operator.get_numbers()) & set(variants):
-                found = True
-                break
+        fromnum = args['fromnum'] or ''
+        found = find(department, fromnum, moment=finish)
 
         app.logger.info('Found: {}'.format(found))
 
@@ -46,6 +62,20 @@ class Router(Resource):
         record.choice = choice
         db.session.commit()
         return {'choice': choice}
+
+
+@app.route('/events', methods=['GET', 'POST'])
+def events():
+    data = request.args.to_dict(flat=True)
+    data.update(request.json or {})
+
+    event = Event(data)
+    db.session.add(event)
+    db.session.commit()
+
+    app.logger.debug('{!r} saved'.format(event))
+
+    return jsonify(success=True)
 
 
 api = Api(app)

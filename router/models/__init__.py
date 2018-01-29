@@ -1,6 +1,6 @@
 from functools import partial
 
-from sqlalchemy import Column as BaseColumn, String, ForeignKey, Integer
+from sqlalchemy import Column as BaseColumn, String, ForeignKey, Integer, JSON
 from sqlalchemy.orm import relationship
 from sqlalchemy_utils import ArrowType
 import arrow
@@ -72,3 +72,34 @@ class Record(db.Model):
 
     def __repr__(self):
         return '<Record({!r}, {!r})>'.format(self.address, self.result)
+
+
+class Event(db.Model):
+    id = Column(Integer, primary_key=True)
+    date_created = Column(ArrowType(timezone=True), default=arrow.now, index=True)
+
+    sipuni = Column(JSON(none_as_null=True))
+
+    short_dst_num = Column(String, default='')
+    short_src_num = Column(String, default='', index=True)
+    dst_num = Column(String, default='')
+    src_num = Column(String, default='', index=True)
+    treeName = Column(String, default='', index=True)
+    timestamp = Column(String, default='')
+
+    def __init__(self, data):
+        self.sipuni = data
+
+        columns = [
+            'short_dst_num', 'short_src_num', 'dst_num', 'src_num',
+            'treeName', 'timestamp',
+        ]
+
+        for column in columns:
+            setattr(self, column, data.get(column, '') or '')
+
+    def __repr__(self):
+        return '<Event({!r}, {!r}, {!r}, {!r})>'.format(
+            str(self.date_created), self.src_num, self.short_dst_num,
+            self.treeName,
+        )
