@@ -46,7 +46,8 @@ class Operator(db.Model):
         return self.name
 
     def get_numbers(self):
-        return [x.strip() for x in (self.phone_number or '').split(',')]
+        numbers = (self.phone_number or '').split(',')
+        return [x.strip() for x in numbers if x.strip()]
 
 
 class Record(db.Model):
