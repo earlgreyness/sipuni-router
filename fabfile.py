@@ -129,6 +129,8 @@ def deploy(setup=False):
     for filename in FILES:
         put(filename, '.')
 
+    put('scripts/*', '.')
+
     local('find . -type d -name __pycache__ -prune -exec rm -R -f {} \;')
     run('rm -R -f {}'.format(PROJ))
     put(PROJ, '.')
@@ -136,10 +138,14 @@ def deploy(setup=False):
 
     if not files.exists('venv'):
         run('python3 -m venv venv')
+
     run('venv/bin/pip3 install --upgrade pip')
     run('venv/bin/pip3 install -r requirements.txt')
+
+    run('venv/bin/python3 setup_cron.py')
 
     if setup:
         setup_systemd()
         setup_nginx()
+
     reload()

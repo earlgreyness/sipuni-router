@@ -1,5 +1,6 @@
 import logging.config
 from collections import OrderedDict
+from functools import wraps
 
 from flask_restful import output_json, Api
 
@@ -20,3 +21,17 @@ class UnicodeApi(Api):
         self.representations = OrderedDict(
             [('application/json; charset=utf-8', output_json)]
         )
+
+
+def context(f):
+    from router import app
+
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        try:
+            with app.app_context():
+                return f(*args, **kwargs)
+        except Exception:
+            app.logger.exception('')
+
+    return decorated
