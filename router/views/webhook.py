@@ -22,7 +22,16 @@ def find(department, fromnum, *, moment):
         Event.date_created.desc()
     )
 
-    return any(event.short_dst_num in numbers for event in query)
+    found = False
+    found_event = None
+
+    for event in query:
+        if event.short_dst_num in numbers:
+            found = True
+            found_event = event
+            break
+
+    return found, found_event
 
 
 class Router(Resource):
@@ -54,13 +63,17 @@ class Router(Resource):
             abort(404)
 
         fromnum = args['fromnum'] or ''
-        found = find(department, fromnum, moment=finish)
+        found, event = find(department, fromnum, moment=finish)
 
-        app.logger.info('Found: {}'.format(found))
+        app.logger.info('Found: {}, event={!r}'.format(found, event))
 
         choice = int(found)
+
         record.choice = choice
+        if event is not None:
+            record.tonum = event.short_dst_num
         db.session.commit()
+
         return {'choice': choice}
 
 
