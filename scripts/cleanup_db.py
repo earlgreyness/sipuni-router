@@ -7,7 +7,7 @@ from router.models import Event
 
 @router.utils.context
 def main():
-    moment = arrow.now().shift(minutes=-7)
+    moment = arrow.now().shift(hours=-3)
     query = Event.query.filter(Event.date_created < moment)
     total = query.count()
     for event in query:

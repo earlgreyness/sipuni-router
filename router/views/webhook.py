@@ -9,7 +9,7 @@ from router.models import check_pair_exists, Operator, Record, Event
 
 
 def find(department, fromnum, *, moment):
-    start = arrow.now().shift(minutes=-2)
+    start = arrow.now().shift(minutes=-30)
 
     query_operators = Operator.query.filter_by(department_name=department)
     numbers = set(chain.from_iterable(x.get_numbers() for x in query_operators))
@@ -26,7 +26,12 @@ def find(department, fromnum, *, moment):
     found_event = None
 
     for event in query:
-        if event.short_dst_num in numbers:
+        short = event.short_dst_num
+
+        if found_event is None and len(short) == 3:
+            found_event = event
+
+        if short in numbers:
             found = True
             found_event = event
             break
@@ -38,18 +43,9 @@ class Router(Resource):
     def get(self, company, department):
         finish = arrow.now()
 
-        try:
-            app.logger.debug(
-                'Complete incoming info: path={}, args={}, form={}, json={}'
-                .format(request.path, request.args, request.form, request.json)
-            )
-        except Exception:
-            app.logger.exception('')
-
         parser = reqparse.RequestParser()
         parser.add_argument('fromnum')
         parser.add_argument('tonum')
-        parser.add_argument('dtmf')
         parser.add_argument('label')
         parser.add_argument('time')
         args = parser.parse_args()
